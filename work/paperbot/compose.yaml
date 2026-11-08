@@ -1,0 +1,120 @@
+name: deepseek-papertrade
+
+x-image: &image ghcr.io/freqtrade/freqtrade@sha256:2ac8ba805e0ea164fd3612ed1ca623cda1fd2f7aab3d6e1b61132e49b35e7e29
+x-security: &security
+  read_only: true
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  pull_policy: never
+  restart: unless-stopped
+
+services:
+  advisor:
+    <<: *security
+    image: *image
+    entrypoint: ["python", "/app/advisor.py"]
+    env_file:
+      - ./.env.deepseek
+    environment:
+      PAIR: BTC/USDT
+      TIMEFRAME: 15m
+      DEEPSEEK_MODEL: deepseek-flash
+      AI_SIGNAL_PATH: /shared/signal.json
+      DECISION_LOG_PATH: /shared/decisions.jsonl
+      ADVISOR_INTERVAL_SECONDS: "900"
+      SIGNAL_TTL_SECONDS: "1200"
+    volumes:
+      - ./advisor.py:/app/advisor.py:ro
+      - ./healthcheck.py:/app/healthcheck.py:ro
+      - ./runtime/shared:/shared
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 90s
+
+  freqtrade:
+    <<: *security
+    image: *image
+    depends_on:
+      advisor:
+        condition: service_healthy
+    environment:
+      AI_SIGNAL_PATH: /shared/signal.json
+      AI_TUNING_PATH: /shared/tuning.json
+    command:
+      - trade
+      - --config
+      - /freqtrade/user_data/config.json
+      - --strategy-path
+      - /freqtrade/user_data/strategies
+      - --strategy
+      - DeepSeekPaperStrategy
+      - --db-url
+      - sqlite:////freqtrade/user_data/db/tradesv3.dryrun.sqlite
+      - --logfile
+      - /freqtrade/user_data/logs/freqtrade.log
+    volumes:
+      - ./runtime/user_data:/freqtrade/user_data
+      - ./config.json:/freqtrade/user_data/config.json:ro
+      - ./DeepSeekPaperStrategy.py:/freqtrade/user_data/strategies/DeepSeekPaperStrategy.py:ro
+      - ./runtime/shared:/shared:ro
+      - ./runtime/logs:/freqtrade/user_data/logs
+      - ./runtime/db:/freqtrade/user_data/db
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib,sys; sys.exit(0 if b'freqtrade' in pathlib.Path('/proc/1/cmdline').read_bytes() else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  optimizer:
+    <<: *security
+    image: *image
+    depends_on:
+      freqtrade:
+        condition: service_healthy
+    entrypoint: ["python", "/app/optimizer.py"]
+    environment:
+      OPTIMIZER_DB_PATH: /data/tradesv3.dryrun.sqlite
+      AI_TUNING_PATH: /shared/tuning.json
+      OPTIMIZER_INTERVAL_SECONDS: "3600"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./optimizer.py:/app/optimizer.py:ro
+      - ./runtime/db:/data:ro
+      - ./runtime/shared:/shared
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,time; s=json.load(open('/shared/tuning.json')); assert time.time()-float(s['updated_at']) < 7200"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  dashboard:
+    <<: *security
+    image: *image
+    entrypoint: ["python", "/app/dashboard.py", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on:
+      freqtrade:
+        condition: service_healthy
+      optimizer:
+        condition: service_healthy
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./dashboard.py:/app/dashboard.py:ro
+      - ./runtime:/data:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

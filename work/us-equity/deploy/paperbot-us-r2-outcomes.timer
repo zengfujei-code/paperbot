@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll the independent common-outcome journal after each bounded run
+
+[Timer]
+OnActiveSec=10s
+OnUnitInactiveSec=30s
+AccuracySec=2s
+Unit=paperbot-us-r2-outcomes.service
+
+[Install]
+WantedBy=timers.target

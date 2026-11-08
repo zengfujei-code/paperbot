@@ -1,0 +1,41 @@
+[Unit]
+Description=Paperbot US continuous quantitative shadow analysis
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=paperbot-us
+Group=paperbot-us
+WorkingDirectory=/opt/ai-papertrade/us-monitor/current
+EnvironmentFile=/opt/ai-papertrade/secrets/alpaca-paper.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -B -m paperbot_us.shadow --archive /var/lib/paperbot-us-shadow/decisions.sqlite --scan-archive /var/lib/paperbot-us/scans-timeparse.sqlite --publish /opt/ai-papertrade/paperbot/runtime/us/analysis.json
+TimeoutStartSec=120
+TimeoutStopSec=10
+KillMode=control-group
+UMask=0077
+StateDirectory=paperbot-us-shadow
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+ReadOnlyPaths=/var/lib/paperbot-us /var/lib/paperbot-us-observe
+ReadWritePaths=/var/lib/paperbot-us-shadow /opt/ai-papertrade/paperbot/runtime/us
+MemoryMax=128M
+CPUQuota=15%
+TasksMax=16
+StandardOutput=journal
+StandardError=journal

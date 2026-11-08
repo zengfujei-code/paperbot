@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Paperbot US shadow-analysis inputs after each bounded run
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=30s
+AccuracySec=2s
+Unit=paperbot-us-shadow.service
+
+[Install]
+WantedBy=timers.target

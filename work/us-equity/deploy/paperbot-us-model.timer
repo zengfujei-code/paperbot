@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for new US quantitative decisions under persisted model-call limits
+
+[Timer]
+OnBootSec=25s
+OnUnitInactiveSec=30s
+AccuracySec=2s
+Unit=paperbot-us-model.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,42 @@
+[Unit]
+Description=Paperbot local common risk-event first-outcome journal
+
+[Service]
+Type=oneshot
+User=paperbot-us
+Group=paperbot-us
+WorkingDirectory=/opt/ai-papertrade/us-r2-outcomes/releases/outcomes-20261029-v2/work/us-equity
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONPATH=/opt/ai-papertrade/us-r2-outcomes/releases/outcomes-20261029-v2/work/us-equity:/opt/ai-papertrade/us-r2-outcomes/releases/outcomes-20261029-v2/work/us-equity/research/r2
+ExecStart=/usr/bin/python3 -B -m paperbot_r2.common_outcome_runner --outcome-book /var/lib/paperbot-us-r2-outcomes/common.sqlite --feature-book /var/lib/paperbot-us-r2-feature-pipeline/features.sqlite --raw-book /var/lib/paperbot-us-r2-receipts/receipts.sqlite --publish /var/lib/paperbot-us-r2-outcomes/status.json --timezone-root /opt/ai-papertrade/us-r2-outcomes/releases/outcomes-20261029-v2/outputs/zoneinfo --timezone-sha256 e9ed07d7bee0c76a9d442d091ef1f01668fee7c4f26014c0a868b19fe6c18a95
+TimeoutStartSec=80s
+TimeoutStopSec=10s
+KillMode=control-group
+UMask=0077
+StateDirectory=paperbot-us-r2-outcomes
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateNetwork=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+InaccessiblePaths=/opt/ai-papertrade/secrets
+ReadOnlyPaths=/var/lib/paperbot-us-r2-receipts /var/lib/paperbot-us-r2-feature-pipeline
+ReadWritePaths=/var/lib/paperbot-us-r2-outcomes
+MemoryMax=192M
+CPUQuota=100%
+Nice=10
+TasksMax=16
+StandardOutput=journal
+StandardError=journal

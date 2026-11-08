@@ -1,0 +1,40 @@
+[Unit]
+Description=Paperbot US GET-only IEX data scan
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=paperbot-us
+Group=paperbot-us
+WorkingDirectory=/opt/ai-papertrade/us-equity/current
+EnvironmentFile=/opt/ai-papertrade/secrets/alpaca-paper.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -B -m paperbot_us.runner --archive /var/lib/paperbot-us/scans.sqlite --checkpoint /var/lib/paperbot-us/checkpoint.json
+TimeoutStartSec=180
+TimeoutStopSec=10
+KillMode=control-group
+UMask=0077
+StateDirectory=paperbot-us
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/paperbot-us
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=16
+StandardOutput=journal
+StandardError=journal
